@@ -55,7 +55,7 @@ namespace ZPD_Lab_1_4
         {
             for (int i = 0; i < positions; i++)
             {
-                bool mostSignificantBit = _block.Get(size - 1);
+                bool mostSignificantBit = _block.Get(size / 2 - 1);
                 _block.LeftShift(1);
                 _block.Set(0, mostSignificantBit);
             }
@@ -83,10 +83,10 @@ namespace ZPD_Lab_1_4
 
         public BitArray CombineIntoBitArray(BitArrayBlock rightHalf)
         {
-            bool[] array = new bool[64];
+            bool[] array = new bool[_block.Length + rightHalf._block.Length];
 
             rightHalf._block.CopyTo(array, 0);
-            this._block.CopyTo(array, 32);
+            this._block.CopyTo(array, rightHalf._block.Length);
 
             return new BitArray(array);
         }

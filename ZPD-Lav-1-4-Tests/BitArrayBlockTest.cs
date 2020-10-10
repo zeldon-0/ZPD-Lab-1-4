@@ -17,7 +17,7 @@ namespace ZPD_Lav_1_4_Tests
             bool[] arrayToCheck = new bool[32];
             bool[] expectedArray = new bool[32];
 
-            block = block.GetRightHalf();
+            block = block.GetLeftHalf();
             bits = block.GetBits();
             bits.CopyTo(arrayToCheck, 0);
 

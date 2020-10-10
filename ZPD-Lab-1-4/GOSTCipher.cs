@@ -18,84 +18,112 @@ namespace ZPD_Lab_1_4
             8, 7, 6, 5, 4, 3, 2, 1
         };
 
-        public GOSTCipher(BitArray key)
+        public GOSTCipher()
         {
-            _key = key;
+            _key = new KeyGenerator().GenerateKey();
             _functionF = new FunctionF();
         }
 
-        public string Encode(string message)
+        public char[] Encode(char[] message)
         {
             BitArrayBlock encodedMessage = new BitArrayBlock(
                 new BitArray(new bool[0])
                 );
 
+            message = _fillCharArrayToSize(message);
+
             for (int i = 0; i < message.Length; i += 8)
             {
-                string messageSlice = message.Substring(i, 8);
+                char[] messageSlice = _getCharArraySlice(message, i, 8); 
                 BitArray messageBlock = _convertToBitArray(messageSlice);
 
                 BitArrayBlock encodedBlock = new BitArrayBlock(
                     _encodeBlock(messageBlock)
                 );
 
-                encodedMessage.CombineIntoBitArray(encodedBlock);
+                encodedMessage = new BitArrayBlock( 
+                    encodedMessage.CombineIntoBitArray(encodedBlock)
+                    );
+ 
             }
+            bool[] bits = new bool[message.Length * 8];
+            encodedMessage.GetBits().CopyTo(bits, 0);
 
-            return _convertToString(encodedMessage);
+
+            return _convertToCharArray(encodedMessage);
         }
 
-        public string Decode(string message)
+        public char[] Decode(char[] message)
         {
-            BitArrayBlock decodedMessage = new BitArrayBlock(
-                 new BitArray(new bool[0])
-            );
+            BitArrayBlock encodedMessage = new BitArrayBlock(
+                new BitArray(new bool[0])
+                );
+
+            message = _fillCharArrayToSize(message);
 
             for (int i = 0; i < message.Length; i += 8)
             {
-                string messageSlice = message.Substring(i, 8);
+                char[] messageSlice = _getCharArraySlice(message, i, 8);
                 BitArray messageBlock = _convertToBitArray(messageSlice);
 
-                BitArrayBlock decodedBlock = new BitArrayBlock(
-                    _encodeBlock(messageBlock)
+                BitArrayBlock encodedBlock = new BitArrayBlock(
+                    _decodeBlock(messageBlock)
                 );
 
-                decodedMessage.CombineIntoBitArray(decodedBlock);
-            }
+                encodedMessage = new BitArrayBlock(
+                    encodedMessage.CombineIntoBitArray(encodedBlock)
+                    );
 
-            return _convertToString(decodedMessage);
+            }
+            bool[] bits = new bool[message.Length * 8];
+            encodedMessage.GetBits().CopyTo(bits, 0);
+
+
+            return _convertToCharArray(encodedMessage);
         }
 
 
-        private BitArray _convertToBitArray(string message)
+        public BitArray _convertToBitArray(char[] message)
         {
-            if (message.Length % 8 != 0)
-            {
-                for (int i = message.Length % 8; i < 8; i++)
-                {
-                    message+=" ";
-                }
-            }
 
-            char[] chars = message.ToCharArray();
-            byte[] bytes = chars.Select(c => (byte)c).ToArray();
+
+            byte[] bytes = message.Reverse().Select(c => (byte)c).ToArray();
 
             BitArray bitArray = new BitArray(bytes);
             bool[] bits = new bool[bytes.Length * 8];
             bitArray.CopyTo(bits, 0);
-            bits = bits.Reverse().ToArray();
 
             bitArray = new BitArray(bits);
             return bitArray;
 
         }
 
-        private string _convertToString(BitArrayBlock block)
+        public char[] _fillCharArrayToSize(char[] array)
+        {
+            char[] newArray = new char[array.Length + 8 - array.Length % 8];
+            if (array.Length % 8 != 0)
+            {
+                for(int i = 0; i < newArray.Length; i++)
+                {
+                    if (i < array.Length)
+                    {
+                        newArray[i] = array[i];
+                    }
+                    else 
+                    {
+                        newArray[i] = ' ';
+                    }
+                }
+                return newArray;
+            }
+            return array;
+        }
+        public char[] _convertToCharArray(BitArrayBlock block)
         {
             BitArray bitArray = block.GetBits();
 
             char[] chars = new char[bitArray.Length / 8];
-            for (int i = bitArray.Length - 1; i >= 0; i -= 8)
+            for (int i = bitArray.Length - 1; i > 0; i -= 8)
             {
                 int numericValue = 0;
                 for (int j = 0; j < 8; j++)
@@ -105,26 +133,26 @@ namespace ZPD_Lab_1_4
                         numericValue += (int)Math.Pow(2, 7 - j);
                     }
                 }
-                chars[7 - i / 8] = (char)numericValue;
+                chars[(bitArray.Length - i) / 8] = (char)numericValue;
             }
 
-            return new string(chars);
+            return chars;
 
         }
-        private BitArray _getBitArraySlice(BitArray bitArray, int startIndex, int endIndex)
+        public char[] _getCharArraySlice(char[] charArray, int startIndex, int size)
         {
-            bool[] sliceBits = new bool[endIndex - startIndex + 1];
+            char[] sliceChars = new char[size];
 
-            for(int i = startIndex; i < endIndex;  i++)
+            for(int i = startIndex; i < startIndex + size;  i++)
             {
-                sliceBits[i - startIndex] = bitArray.Get(i);
+                sliceChars[i - startIndex] = charArray[i];
             }
 
-            return new BitArray(sliceBits);
+            return sliceChars;
             
         }
 
-        private BitArray _encodeBlock(BitArray block)
+        public BitArray _encodeBlock(BitArray block)
         {
             BitArrayBlock wholeBlock = new BitArrayBlock(block);
 
@@ -156,7 +184,7 @@ namespace ZPD_Lab_1_4
             return leftBlock.CombineIntoBitArray(rightBlock);
         }
 
-        private BitArray _decodeBlock(BitArray block)
+        public BitArray _decodeBlock(BitArray block)
         {
             BitArrayBlock wholeBlock = new BitArrayBlock(block);
 
@@ -188,9 +216,9 @@ namespace ZPD_Lab_1_4
             return leftBlock.CombineIntoBitArray(rightBlock);
         }
 
-        private BitArrayBlock _getSubKey(int round)
+        public BitArrayBlock _getSubKey(int round)
         {
-            int subKeyIndex = _subKeyOrder[round];
+            int subKeyIndex = _subKeyOrder[round] - 1;
 
             bool[] bits = new bool[32];
             for (int i = 0; i < 32; i++)
@@ -202,7 +230,7 @@ namespace ZPD_Lab_1_4
             return new BitArrayBlock(bitArray);
         }
 
-        private int[] _convertTo4BitInts(BitArray bitArray)
+        public int[] _convertTo4BitInts(BitArray bitArray)
         {
             bool[] bits = new bool[bitArray.Length];
             bitArray.CopyTo(bits, 0);
@@ -220,7 +248,7 @@ namespace ZPD_Lab_1_4
             return numbers;
         }
 
-        private BitArrayBlock _convertToBits(int[] numbers)
+        public BitArrayBlock _convertToBits(int[] numbers)
         {
             bool[] bits = new bool[numbers.Length * 4];
             for(int i = 0; i < numbers.Length; i++)
